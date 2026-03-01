@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""AKShare A 股数据查询 - 简化版 CLI
+
+只包含能正常工作的接口：
+- 实时行情 (spot)
+- 历史K线 (hist)
+- 个股信息 (info)
+- 大盘指数 (index)
+- 个股新闻 (news)
+"""
+
+import argparse
+import json
+import sys
+
+# 导入各模块
+from . import rate_limiter
+from .spot import get_spot, get_spot_all
+from .hist import get_hist
+from .stock_info import get_stock_info
+from .macro import get_index_daily
+from .news import get_stock_news
+
+
+def cmd_spot(args):
+    """查询实时行情"""
+    use_cache = not getattr(args, "no_cache", False)
+    if args.all:
+        return get_spot_all(args.market or "all", args.source, use_cache)
+    if args.symbol:
+        return get_spot(args.symbol, args.source, use_cache)
+    raise ValueError("请指定 --symbol 或 --all")
+
+
+def cmd_hist(args):
+    """查询历史K线"""
+    use_cache = not getattr(args, "no_cache", False)
+    return get_hist(args.symbol, args.start, args.end, args.period, args.adjust, args.source, use_cache)
+
+
+def cmd_info(args):
+    """查询个股信息"""
+    use_cache = not getattr(args, "no_cache", False)
+    return get_stock_info(args.symbol, args.source, None, use_cache)
+
+
+def cmd_index(args):
+    """查询大盘指数"""
+    use_cache = not getattr(args, "no_cache", False)
+    return get_index_daily(args.symbol, args.adjust, use_cache)
+
+
+def cmd_news(args):
+    """查询个股新闻"""
+    use_cache = not getattr(args, "no_cache", False)
+    return get_stock_news(args.symbol, args.limit or 10, use_cache)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="AKShare A 股数据查询")
+    parser.add_argument("--format", choices=["json", "dict"], default="json")
+    parser.add_argument("--indent", type=int, default=2)
+    parser.add_argument("--verbose", action="store_true")
+
+    subparsers = parser.add_subparsers(dest="command", help="命令")
+
+    # spot 命令
+    spot_parser = subparsers.add_parser("spot", help="实时行情")
+    spot_group = spot_parser.add_mutually_exclusive_group()
+    spot_group.add_argument("--symbol", help="股票代码")
+    spot_group.add_argument("--all", action="store_true")
+    spot_parser.add_argument("--market", default="all")
+    spot_parser.add_argument("--source", default="tx")
+    spot_parser.add_argument("--no-cache", action="store_true")
+
+    # hist 命令
+    hist_parser = subparsers.add_parser("hist", help="历史K线")
+    hist_parser.add_argument("--symbol", required=True)
+    hist_parser.add_argument("--start", required=True)
+    hist_parser.add_argument("--end", required=True)
+    hist_parser.add_argument("--period", default="daily")
+    hist_parser.add_argument("--adjust", default="")
+    hist_parser.add_argument("--source", default="tx")
+    hist_parser.add_argument("--no-cache", action="store_true")
+
+    # info 命令
+    info_parser = subparsers.add_parser("info", help="个股信息")
+    info_parser.add_argument("--symbol", required=True)
+    info_parser.add_argument("--source", default="em")
+    info_parser.add_argument("--no-cache", action="store_true")
+
+    # index 命令
+    index_parser = subparsers.add_parser("index", help="大盘指数")
+    index_parser.add_argument("--symbol", default="000001")
+    index_parser.add_argument("--adjust", default="")
+    index_parser.add_argument("--no-cache", action="store_true")
+
+    # news 命令
+    news_parser = subparsers.add_parser("news", help="个股新闻")
+    news_parser.add_argument("--symbol", required=True)
+    news_parser.add_argument("--limit", type=int, default=10)
+    news_parser.add_argument("--no-cache", action="store_true")
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    # 配置日志
+    import logging
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING)
+
+    # 配置速率限制
+    rate_limiter.configure_rate_limiter(min_interval=1.0, max_interval=3.0, enable_random=True)
+
+    # 命令映射
+    command_map = {
+        "spot": cmd_spot,
+        "hist": cmd_hist,
+        "info": cmd_info,
+        "index": cmd_index,
+        "news": cmd_news,
+    }
+
+    try:
+        result = command_map[args.command](args)
+        print(json.dumps(result, ensure_ascii=False, indent=args.indent))
+    except Exception as e:
+        print(json.dumps({"error": str(e)}, ensure_ascii=False, indent=2))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
