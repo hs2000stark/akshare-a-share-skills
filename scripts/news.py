@@ -87,7 +87,7 @@ def _fetch_stock_news(symbol: str, limit: int = 10) -> list:
     df = ak.stock_news_em(symbol=symbol)
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "title": str(row.get("新闻标题", "")),
             "content": str(row.get("新闻内容", ""))[:200],
@@ -135,21 +135,63 @@ def _fetch_market_news(limit: int = 10) -> list:
 
 # ========== 财经早餐 ==========
 def _fetch_breakfast(limit: int = 10) -> list:
-    """财经早餐"""
+    """财经早餐 - 默认只获取当天(和最近1-2天)的数据，返回每条新闻解析"""
     import akshare as ak
+    from datetime import datetime
+    import re
     
     df = ak.stock_info_cjzc_em()
     
+    # 获取今天的日期字符串 (格式: 2026-03-02)
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # 过滤只保留今天发布的数据
+    df_today = df[df["发布时间"].astype(str).str.startswith(today)]
+    
+    # 如果当天没有数据（节假日等情况），则获取最近的数据
+    if len(df_today) == 0:
+        df_today = df.head(limit)
+    else:
+        # 只取当天数据，最多limit条
+        df_today = df_today.head(limit)
+    
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df_today.iterrows():
+        digest = str(row.get("摘要", ""))
+        
+        # 解析每条新闻
+        news_items = _parse_breakfast_items(digest)
+        
         result.append({
             "title": str(row.get("标题", "")),
-            "digest": str(row.get("摘要", "")),
+            "digest": digest,
             "time": str(row.get("发布时间", "")),
             "url": str(row.get("链接", "")),
+            "items": news_items,  # 解析后的每条新闻
         })
     
     return result
+
+
+def _parse_breakfast_items(digest: str) -> list:
+    """解析财经早餐摘要中的每条新闻"""
+    import re
+    
+    # 去掉开头的标题【...】
+    digest_clean = re.sub(r'【[^】]+】', '', digest)
+    
+    # 按数字+、分割
+    news_items = re.split(r'(\d+)、', digest_clean)
+    
+    items = []
+    for i in range(1, len(news_items), 2):
+        if i+1 < len(news_items):
+            items.append({
+                "id": news_items[i],
+                "content": news_items[i+1].strip()
+            })
+    
+    return items
 
 
 # ========== 财联社电报 ==========
@@ -160,7 +202,7 @@ def _fetch_cls_news(limit: int = 10) -> list:
     df = ak.stock_info_global_cls(symbol="全部")
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "title": str(row.get("标题", "")),
             "content": str(row.get("内容", "")),
@@ -179,7 +221,7 @@ def _fetch_global_em(limit: int = 10) -> list:
     df = ak.stock_info_global_em()
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "title": str(row.get("标题", "")),
             "digest": str(row.get("摘要", "")),
@@ -198,7 +240,7 @@ def _fetch_global_sina(limit: int = 10) -> list:
     df = ak.stock_info_global_sina()
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "time": str(row.get("时间", "")),
             "content": str(row.get("内容", "")),
@@ -215,7 +257,7 @@ def _fetch_global_futu(limit: int = 10) -> list:
     df = ak.stock_info_global_futu()
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "title": str(row.get("标题", "")),
             "content": str(row.get("内容", "")),
@@ -234,7 +276,7 @@ def _fetch_global_ths(limit: int = 10) -> list:
     df = ak.stock_info_global_ths()
     
     result = []
-    for _, row in df.head(limit).iterrows():
+    for _, row in df.head(200).iterrows():
         result.append({
             "title": str(row.get("标题", "")),
             "content": str(row.get("内容", "")),
@@ -243,3 +285,43 @@ def _fetch_global_ths(limit: int = 10) -> list:
         })
     
     return result
+
+
+# ========== 财经早餐详情抓取 ==========
+def fetch_breakfast_detail(url: str) -> dict:
+    """抓取财经早餐链接的详细内容"""
+    import requests
+    from bs4 import BeautifulSoup
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+        resp.encoding = 'utf-8'
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        
+        # 获取标题
+        title = soup.find('title')
+        title = title.text if title else ""
+        
+        # 获取所有段落文本
+        paragraphs = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4'])
+        
+        content_text = []
+        for p in paragraphs:
+            text = p.get_text(strip=True)
+            if text and len(text) > 10:
+                content_text.append(text)
+        
+        return {
+            "title": title,
+            "content": content_text,
+            "success": True
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }

@@ -42,7 +42,44 @@ def get_index_daily(symbol: str = "000001", adjust: str = "", use_cache: bool = 
 
 
 def _fetch_tx_index(symbol: str) -> list:
-    """使用腾讯接口获取指数K线"""
+    """使用akshare获取指数K线"""
+    import akshare as ak
+    
+    # 指数代码映射
+    symbol_map = {
+        "000001": "sh000001",  # 上证指数
+        "399001": "sz399001",  # 深证成指
+        "399006": "sz399006",  # 创业板指
+        "000688": "sh000688",  # 科创50
+    }
+    
+    ak_symbol = symbol_map.get(symbol, f"sh{symbol}")
+    
+    try:
+        df = ak.stock_zh_index_daily(symbol=ak_symbol)
+        # 获取最近100条数据
+        df = df.tail(100)
+        
+        result = []
+        for _, row in df.iterrows():
+            result.append({
+                '日期': str(row['date']),
+                '开盘': str(row['open']),
+                '收盘': str(row['close']),
+                '最高': str(row['high']),
+                '最低': str(row['low']),
+                '成交量': str(row['volume']),
+            })
+        
+        return result
+    except Exception as e:
+        print(f"akshare获取失败: {e}")
+        # 降级使用腾讯接口
+        return _fetch_tx_index_fallback(symbol)
+
+
+def _fetch_tx_index_fallback(symbol: str) -> list:
+    """使用腾讯接口获取指数K线(降级方案)"""
     import requests
     
     # 指数代码映射
@@ -74,8 +111,6 @@ def _fetch_tx_index(symbol: str) -> list:
             })
     
     return result
-
-
 def get_index_spot(symbols=None) -> dict[str, Any]:
     """获取指数实时行情"""
     if not symbols:

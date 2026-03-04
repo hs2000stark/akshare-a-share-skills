@@ -33,13 +33,13 @@ uv sync  # 安装依赖
 | 基本面 | 个股信息 | `info --symbol 600000` | 东财网页 | ✅ 可用 |
 | 宏观类 | 大盘指数 | `index --symbol 000001` | 腾讯 | ✅ 可用 |
 | 资讯类 | 个股新闻 | `news --symbol 600000 --type stock` | 新浪 | ✅ 可用 |
-| 资讯类 | 市场新闻 | `news --type market --limit 10` | 东财 | ✅ 可用 |
-| 资讯类 | 财联社电报 | `news --type cls --limit 10` | 财联社 | ✅ 可用 |
-| 资讯类 | 财经早餐 | `news --type breakfast --limit 10` | 东财 | ✅ 可用 |
-| 资讯类 | 全球快讯(东财) | `news --type global --limit 10` | 东财 | ✅ 可用 |
-| 资讯类 | 全球快讯(新浪) | `news --type sina --limit 10` | 新浪 | ✅ 可用 |
-| 资讯类 | 富途快讯 | `news --type futu --limit 10` | 富途 | ✅ 可用 |
-| 资讯类 | 同花顺直播 | `news --type ths --limit 10` | 同花顺 | ✅ 可用 |
+| 资讯类 | 市场新闻 | `news --type market --limit 100` | 东财 | ✅ 可用 |
+| 资讯类 | 财联社电报 | `news --type cls --limit 100` | 财联社 | ✅ 可用 |
+| 资讯类 | 财经早餐 | `news --type breakfast --limit 100` | 东财 | ✅ 可用 |
+| 资讯类 | 全球快讯(东财) | `news --type global --limit 100` | 东财 | ✅ 可用 |
+| 资讯类 | 全球快讯(新浪) | `news --type sina --limit 100` | 新浪 | ✅ 可用 |
+| 资讯类 | 富途快讯 | `news --type futu --limit 100` | 富途 | ✅ 可用 |
+| 资讯类 | 同花顺直播 | `news --type ths --limit 100` | 同花顺 | ✅ 可用 |
 
 ### ✅ Python 模块可用接口（未暴露 CLI）
 
@@ -85,16 +85,16 @@ uv run python -m scripts.cli index --symbol 000001
 uv run python -m scripts.cli news --symbol 600000 --type stock
 
 # 市场新闻
-uv run python -m scripts.cli news --type market --limit 10
+uv run python -m scripts.cli news --type market --limit 100
 
 # 财联社电报
-uv run python -m scripts.cli news --type cls --limit 10
+uv run python -m scripts.cli news --type cls --limit 100
 
 # 财经早餐
-uv run python -m scripts.cli news --type breakfast --limit 10
+uv run python -m scripts.cli news --type breakfast --limit 100
 
 # 同花顺直播
-uv run python -m scripts.cli news --type ths --limit 10
+uv run python -m scripts.cli news --type ths --limit 100
 ```
 
 ### 6. Python 模块调用示例

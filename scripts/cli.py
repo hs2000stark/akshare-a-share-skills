@@ -86,7 +86,7 @@ def main():
     news_parser.add_argument("--type", default="market", 
         choices=["stock", "market", "cls", "breakfast", "global", "sina", "futu", "ths"],
         help="资讯类型: stock-个股新闻, market-全市场新闻, cls-财联社电报, breakfast-财经早餐, global-全球快讯(东财), sina-全球快讯(新浪), futu-富途快讯, ths-同花顺直播")
-    news_parser.add_argument("--limit", type=int, default=10, help="返回数量")
+    news_parser.add_argument("--limit", type=int, default=100, help="返回数量")
     news_parser.add_argument("--no-cache", action="store_true", help="禁用缓存")
     news_parser.set_defaults(func=cmd_news)
 
